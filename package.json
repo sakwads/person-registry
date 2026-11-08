@@ -1,0 +1,16 @@
+{
+  "name": "person-registry",
+  "version": "1.0.0",
+  "description": "Simple web app to capture First name, Last name and Sex, stored in an embedded NoSQL database (NeDB).",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js"
+  },
+  "engines": {
+    "node": ">=18"
+  },
+  "dependencies": {
+    "@seald-io/nedb": "^4.0.4",
+    "express": "^4.21.2"
+  }
+}

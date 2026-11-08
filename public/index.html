@@ -1,0 +1,185 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Person Registry</title>
+  <style>
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      font-family: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+      background: #f4f5f7;
+      color: #1f2328;
+    }
+    main { max-width: 720px; margin: 0 auto; padding: 32px 16px; }
+    h1 { font-size: 1.5rem; margin: 0 0 20px; }
+    h2 { font-size: 1.1rem; margin: 0 0 12px; }
+    .card {
+      background: #fff;
+      border: 1px solid #e1e4e8;
+      border-radius: 10px;
+      padding: 20px;
+      margin-bottom: 24px;
+    }
+    .row { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+    label { display: block; font-size: 0.85rem; font-weight: 600; margin-bottom: 6px; }
+    input[type="text"] {
+      width: 100%; padding: 10px; font-size: 1rem;
+      border: 1px solid #c9ced6; border-radius: 6px;
+    }
+    fieldset { border: none; padding: 0; margin: 16px 0 0; }
+    legend { font-size: 0.85rem; font-weight: 600; margin-bottom: 6px; }
+    .radios { display: flex; gap: 20px; }
+    .radios label { font-weight: 400; font-size: 1rem; display: flex; gap: 6px; align-items: center; margin: 0; }
+    button {
+      cursor: pointer; border: none; border-radius: 6px; font-size: 1rem;
+    }
+    .primary { margin-top: 20px; padding: 10px 20px; background: #2563eb; color: #fff; }
+    .primary:hover { background: #1d4ed8; }
+    .primary:disabled { opacity: 0.6; cursor: default; }
+    .msg { margin-top: 12px; font-size: 0.9rem; min-height: 1.2em; }
+    .msg.error { color: #b91c1c; }
+    .msg.ok { color: #15803d; }
+    .table-wrap {
+      max-height: 320px; overflow-y: auto;
+      border: 1px solid #e1e4e8; border-radius: 6px;
+    }
+    table { width: 100%; border-collapse: collapse; }
+    th, td { text-align: left; padding: 10px 12px; border-bottom: 1px solid #eef0f3; }
+    th { position: sticky; top: 0; background: #f8f9fb; font-size: 0.85rem; }
+    .delete { padding: 6px 12px; background: #fee2e2; color: #b91c1c; font-size: 0.85rem; }
+    .delete:hover { background: #fecaca; }
+    .empty { text-align: center; color: #6b7280; padding: 20px; }
+    @media (max-width: 520px) { .row { grid-template-columns: 1fr; } }
+  </style>
+</head>
+<body>
+  <main>
+    <h1>Person Registry</h1>
+
+    <section class="card">
+      <h2>Add a person</h2>
+      <form id="personForm" novalidate>
+        <div class="row">
+          <div>
+            <label for="firstName">First name</label>
+            <input type="text" id="firstName" name="firstName" required />
+          </div>
+          <div>
+            <label for="lastName">Last name</label>
+            <input type="text" id="lastName" name="lastName" required />
+          </div>
+        </div>
+        <fieldset>
+          <legend>Sex</legend>
+          <div class="radios">
+            <label><input type="radio" name="sex" value="Male" /> Male</label>
+            <label><input type="radio" name="sex" value="Female" /> Female</label>
+            <label><input type="radio" name="sex" value="Other" /> Other</label>
+          </div>
+        </fieldset>
+        <button type="submit" class="primary" id="saveBtn">Save</button>
+        <div class="msg" id="msg"></div>
+      </form>
+    </section>
+
+    <section class="card">
+      <h2>Saved records (<span id="count">0</span>)</h2>
+      <div class="table-wrap">
+        <table>
+          <thead>
+            <tr><th>First name</th><th>Last name</th><th>Sex</th><th>Action</th></tr>
+          </thead>
+          <tbody id="rows"></tbody>
+        </table>
+      </div>
+    </section>
+  </main>
+
+  <script>
+    const form = document.getElementById('personForm');
+    const msg = document.getElementById('msg');
+    const rows = document.getElementById('rows');
+    const count = document.getElementById('count');
+    const saveBtn = document.getElementById('saveBtn');
+
+    function showMsg(text, type) {
+      msg.textContent = text;
+      msg.className = 'msg ' + (type || '');
+    }
+
+    function render(people) {
+      count.textContent = people.length;
+      rows.innerHTML = '';
+      if (!people.length) {
+        rows.innerHTML = '<tr><td colspan="4" class="empty">No records yet</td></tr>';
+        return;
+      }
+      for (const p of people) {
+        const tr = document.createElement('tr');
+        for (const v of [p.firstName, p.lastName, p.sex]) {
+          const td = document.createElement('td');
+          td.textContent = v;
+          tr.appendChild(td);
+        }
+        const td = document.createElement('td');
+        const btn = document.createElement('button');
+        btn.className = 'delete';
+        btn.textContent = 'Delete';
+        btn.onclick = () => removePerson(p._id);
+        td.appendChild(btn);
+        tr.appendChild(td);
+        rows.appendChild(tr);
+      }
+    }
+
+    async function load() {
+      try {
+        const res = await fetch('/api/people');
+        render(await res.json());
+      } catch {
+        showMsg('Could not load records', 'error');
+      }
+    }
+
+    async function removePerson(id) {
+      const res = await fetch('/api/people/' + encodeURIComponent(id), { method: 'DELETE' });
+      if (res.ok) { showMsg('Record deleted', 'ok'); load(); }
+      else showMsg('Delete failed', 'error');
+    }
+
+    form.addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const firstName = form.firstName.value.trim();
+      const lastName = form.lastName.value.trim();
+      const sexInput = form.querySelector('input[name="sex"]:checked');
+
+      if (!firstName || !lastName || !sexInput) {
+        showMsg('Please fill in first name, last name and sex.', 'error');
+        return;
+      }
+
+      saveBtn.disabled = true;
+      try {
+        const res = await fetch('/api/people', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ firstName, lastName, sex: sexInput.value })
+        });
+        const data = await res.json();
+        if (!res.ok) throw new Error(data.error || 'Save failed');
+        form.reset();
+        showMsg('Saved', 'ok');
+        load();
+      } catch (err) {
+        showMsg(err.message, 'error');
+      } finally {
+        saveBtn.disabled = false;
+      }
+    });
+
+    load();
+  </script>
+</body>
+</html>
