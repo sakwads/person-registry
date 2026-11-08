@@ -2,6 +2,8 @@
 
 A minimal web app to capture **First name**, **Last name** and **Sex** (Male / Female / Other), stored in an embedded NoSQL document database ([NeDB](https://github.com/seald/nedb) — MongoDB-style API, persisted to a local file). Saved records appear in a scrollable table with a Delete action.
 
+This is for use in testing the Amini Cloud Internal Release. Very simple app to not reveal any secret sauce of Amini
+
 ## Run locally
 
 Requires Node.js 18+.
